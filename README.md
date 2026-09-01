@@ -2,7 +2,7 @@
 
 **NB!!!**
 
-**1.** Before using the app **ICAI**, let's thank to [Jalecom](https://github.com/Jalecom/AJ_HC1703L_Teardown) for providing the tools to "bypass" the imposed restrictions.
+**1.** Before using the app **ICAI**, let's tnx to [Jalecom](https://github.com/Jalecom/AJ_HC1703L_Teardown) for providing the tools to "bypass" the imposed restrictions.
 
 **2.** ONLY AFTER you successfully apply the [Jalecom's Hack](https://github.com/Jalecom/AJ_HC1703L_Teardown), you can come back here again and try with using the [ICAI app](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365.).
 
