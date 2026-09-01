@@ -21,6 +21,7 @@ import re
 import gc
 import traceback
 import socket
+import psutil
 
 try:
     import sounddevice as sd
@@ -469,11 +470,11 @@ class CameraController:
         Не позволява стартирането на повече от един процес.
         """
 
-        # Ако процесът съществува и все още работи,
-        # не стартираме втори прозорец
+        # Проверка дали процесът все още е жив
         if (
             self.recordings_process is not None
             and self.recordings_process.poll() is None
+            and self.is_process_running(self.recordings_process.pid)
         ):
             print("Прозорецът със записите вече е отворен.")
             return
@@ -506,9 +507,29 @@ class CameraController:
 
             print("Файловият мениджър за записите е стартиран.")
 
+            # Проверка за приключване на процеса в отделен thread
+            import threading
+
+            def wait_for_process():
+                self.recordings_process.wait()
+                # Нулиране на процеса, когато приключи
+                self.recordings_process = None
+                print("Процесът на файловия мениджър приключи.")
+
+            thread = threading.Thread(target=wait_for_process, daemon=True)
+            thread.start()
+
         except Exception as e:
             self.recordings_process = None
             print(f"Грешка при стартиране на файловия мениджър: {e}")
+
+    def is_process_running(self, pid):
+        """Проверява дали процесът с даден PID все още е активен."""
+        try:
+            process = psutil.Process(pid)
+            return process.is_running()
+        except psutil.NoSuchProcess:
+            return False
 
     def walkie_talkie_record_callback(self, indata, frames, time_info, status):
         if self.walkie_talkie_recording:
