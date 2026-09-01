@@ -27,9 +27,32 @@ class RecordingsBrowser(tk.Toplevel):
 
         self.create_widgets()
 
+        # Проверка за .tmp файлове след създаване на прозореца
+        self.after(100, self.check_and_cleanup_temp_files)
+
         # Зареждане на записите в отделен thread,
         # за да не блокира главният прозорец.
         self.load_recordings()
+
+        # Свържи клавиша Delete с функцията за изтриване
+        self.tree.bind("<Delete>", self.on_delete_key_press)
+
+    def check_and_cleanup_temp_files(self):
+        """Проверява за .tmp папка и питай потребителя дали да я изтрие."""
+        camera_name = self.camera.get("name", "default_camera")
+        tmp_dir = os.path.join("recordings", camera_name, ".tmp")
+
+        if os.path.exists(tmp_dir):
+            answer = messagebox.askyesno(
+                "Чистене",
+                "Намерени са временни файлове от предишни сесии.\n\nДа бъдат ли изтрити?",
+                parent=self,  # Показва въпроса върху основния прозорец
+            )
+            if answer:
+                import shutil
+
+                shutil.rmtree(tmp_dir)
+                print(f"Изтрита .tmp папка: {tmp_dir}")
 
     def create_widgets(self):
         """Създава интерфейса на файловия мениджър."""
@@ -60,12 +83,31 @@ class RecordingsBrowser(tk.Toplevel):
         )
         self.copy_button.pack(side="left", padx=5)
 
-        self.delete_button = ttk.Button(
-            toolbar, text="Изтрий", command=self.delete_selected
+        self.download_all_button = ttk.Button(
+            toolbar, text="Изтегли всички", command=self.download_all_selected
+        )
+        self.download_all_button.pack(side="left", padx=5)
+
+        self.delete_button = tk.Button(
+            toolbar,
+            text="Изтрий",
+            command=self.delete_selected,
+            bg="red",
+            fg="black",
+            font=("Arial", 10, "bold"),
         )
         self.delete_button.pack(side="left", padx=5)
 
-        ttk.Button(toolbar, text="Затвори", command=self.destroy).pack(side="right")
+        # Черен бутон "Затвори" с бял удебелен шрифт
+        close_button = tk.Button(
+            toolbar,
+            text="Затвори",
+            command=self.destroy,
+            bg="black",
+            fg="white",
+            font=("Arial", 10, "bold"),
+        )
+        close_button.pack(side="right", padx=5)
 
         tree_frame = ttk.Frame(main_frame)
         tree_frame.pack(fill="both", expand=True)
@@ -74,7 +116,7 @@ class RecordingsBrowser(tk.Toplevel):
             tree_frame,
             columns=("type", "path"),
             show="tree headings",
-            selectmode="browse",
+            selectmode="extended",  # Позволява множествен избор
         )
 
         self.tree.heading("#0", text="Име")
@@ -123,9 +165,15 @@ class RecordingsBrowser(tk.Toplevel):
             label="Копирай локално", command=self.copy_selected
         )
 
+        self.context_menu.add_command(
+            label="Изтегли всички", command=self.download_all_selected
+        )
+
         self.context_menu.add_separator()
 
-        self.context_menu.add_command(label="Изтрий", command=self.delete_selected)
+        self.context_menu.add_command(
+            label="Изтрий", command=self.delete_selected_from_context
+        )
 
         self.tree.bind("<Button-3>", self.show_context_menu)
 
@@ -427,6 +475,22 @@ class RecordingsBrowser(tk.Toplevel):
             "path": item_values[1],
         }
 
+    def get_selected_items(self):
+        """Връща списък с избраните елементи."""
+        selection = self.tree.selection()
+        items = []
+        for item_id in selection:
+            item_values = self.tree.item(item_id, "values")
+            items.append(
+                {
+                    "id": item_id,
+                    "name": self.tree.item(item_id, "text"),
+                    "type": item_values[0],
+                    "path": item_values[1],
+                }
+            )
+        return items
+
     def open_selected(self):
         """Отваря избраната папка или стартира избраното видео."""
 
@@ -446,15 +510,35 @@ class RecordingsBrowser(tk.Toplevel):
         self.open_selected()
 
     def show_context_menu(self, event):
+        # Не размаркира избраните елементи при десен бутон
         item_id = self.tree.identify_row(event.y)
+        if item_id and item_id not in self.tree.selection():
+            # Ако няма избран елемент, добави текущия
+            pass  # Не правим нищо, за да не размаркираме
 
-        if item_id:
-            self.tree.selection_set(item_id)
-            self.context_menu.tk_popup(event.x_root, event.y_root)
+        self.context_menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_selected_from_context(self):
+        """Изтрива избраните файлове от контекстното меню."""
+        self.delete_selected()
 
     # ------------------------------------------------------------------
     # Изтегляне и стартиране на видео
     # ------------------------------------------------------------------
+
+    def get_camera_recordings_path(self):
+        """Връща папка за изтегляне според името на камерата."""
+        camera_name = self.camera.get("name", "default_camera")
+        recordings_path = os.path.join("recordings", camera_name)
+        os.makedirs(recordings_path, exist_ok=True)
+        return recordings_path
+
+    def get_tmp_video_path(self, filename):
+        """Връща временно местоположение за видео файл при гледане."""
+        camera_name = self.camera.get("name", "default_camera")
+        tmp_dir = os.path.join("recordings", camera_name, ".tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        return os.path.join(tmp_dir, filename)
 
     def copy_selected(self):
         """Изтегля избрания MP4 файл локално."""
@@ -487,6 +571,31 @@ class RecordingsBrowser(tk.Toplevel):
         )
         thread.start()
 
+    def download_all_selected(self):
+        """Изтегля всички избрани видео файлове в папката на камерата."""
+        items = self.get_selected_items()
+        if not items:
+            messagebox.showinfo("Избор", "Няма избрани файлове.", parent=self)
+            return
+
+        video_items = [item for item in items if item["type"] == "Видео"]
+        if not video_items:
+            messagebox.showinfo("Избор", "Няма избрани видео файлове.", parent=self)
+            return
+
+        recordings_path = self.get_camera_recordings_path()
+
+        for item in video_items:
+            destination = os.path.join(recordings_path, item["name"])
+            thread = threading.Thread(
+                target=self.download_file_thread,
+                args=(item["path"], destination, False),
+                daemon=True,
+            )
+            thread.start()
+
+        self.show_status(f"Изтегляне на {len(video_items)} файла...")
+
     def play_selected(self):
         """Изтегля и стартира избраното видео."""
 
@@ -499,18 +608,14 @@ class RecordingsBrowser(tk.Toplevel):
             messagebox.showinfo("Видео", "Изберете MP4 файл.", parent=self)
             return
 
-        local_folder = os.path.join(os.path.expanduser("~"), "camera_recordings")
-
-        os.makedirs(local_folder, exist_ok=True)
-
-        destination = os.path.join(local_folder, item["name"])
+        local_path = self.get_tmp_video_path(item["name"])
 
         self.set_buttons_state("disabled")
         self.show_status("Изтегляне на видеото...")
 
         thread = threading.Thread(
             target=self.download_file_thread,
-            args=(item["path"], destination, True),
+            args=(item["path"], local_path, True),
             daemon=True,
         )
         thread.start()
@@ -591,16 +696,21 @@ class RecordingsBrowser(tk.Toplevel):
     # ------------------------------------------------------------------
 
     def delete_selected(self):
-        """Изтрива избран файл или цяла папка."""
+        """Изтрива всички избрани файлове или папки."""
 
-        item = self.get_selected_item()
-
-        if not item:
+        items = self.get_selected_items()
+        if not items:
+            messagebox.showinfo("Избор", "Няма избрани файлове.", parent=self)
             return
+
+        if len(items) == 1:
+            msg = f"Наистина ли желаете да изтриете:\n{items[0]['name']}?"
+        else:
+            msg = f"Наистина ли желаете да изтриете {len(items)} файла?"
 
         answer = messagebox.askyesno(
             "Потвърждение",
-            (f"Това действие е необратимо.\n\nДа бъде ли изтрито:\n{item['name']}?"),
+            msg,
             parent=self,
         )
 
@@ -611,31 +721,38 @@ class RecordingsBrowser(tk.Toplevel):
         self.show_status("Изтриване...")
 
         thread = threading.Thread(
-            target=self.delete_selected_thread, args=(item,), daemon=True
+            target=self.delete_multiple_items_thread, args=(items,), daemon=True
         )
         thread.start()
 
-    def delete_selected_thread(self, item):
-        """FTP изтриване в отделен thread."""
+    def on_delete_key_press(self, event):
+        """Извиква изтриване при натискане на клавиша Delete."""
+        self.delete_selected()
+
+    def delete_multiple_items_thread(self, items):
+        """FTP изтриване на множество файлове в отделен thread."""
 
         ftp = None
 
         try:
             ftp = self.connect_ftp()
 
-            remote_path = item["path"]
-            parent_path = str(PurePosixPath(remote_path).parent)
-            name = PurePosixPath(remote_path).name
+            for item in items:
+                remote_path = item["path"]
+                parent_path = str(PurePosixPath(remote_path).parent)
+                name = PurePosixPath(remote_path).name
 
-            ftp.cwd(parent_path)
+                ftp.cwd(parent_path)
 
-            if item["type"] == "Видео":
-                ftp.delete(name)
+                if item["type"] == "Видео":
+                    ftp.delete(name)
 
-            elif item["type"] == "Папка":
-                self.delete_ftp_directory(ftp, name)
+                elif item["type"] == "Папка":
+                    self.delete_ftp_directory(ftp, name)
 
-            self.after(0, lambda item_id=item["id"]: self.remove_tree_item(item_id))
+            self.after(
+                0, lambda: self.remove_multiple_tree_items([i["id"] for i in items])
+            )
 
         except Exception as e:
             self.after(
@@ -678,8 +795,9 @@ class RecordingsBrowser(tk.Toplevel):
         ftp.cwd(parent_path)
         ftp.rmd(dirname)
 
-    def remove_tree_item(self, item_id):
-        self.tree.delete(item_id)
+    def remove_multiple_tree_items(self, item_ids):
+        for item_id in item_ids:
+            self.tree.delete(item_id)
         self.show_status("Изтриването приключи успешно.")
 
     # ------------------------------------------------------------------
@@ -692,7 +810,7 @@ class RecordingsBrowser(tk.Toplevel):
             self.open_button,
             self.play_button,
             self.copy_button,
-            self.delete_button,
+            self.download_all_button,
         ):
             button.configure(state=state)
 
@@ -719,7 +837,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
 
-    camera = {"ip": camera_ip}
+    camera = {"ip": camera_ip, "name": "1"}  # Примерно име на камера
 
     browser = RecordingsBrowser(parent=root, camera=camera)
 
