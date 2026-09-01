@@ -4,21 +4,23 @@
 
 **1.** Before using the app **ICAI**, let's tnx to [Jalecom](https://github.com/Jalecom/AJ_HC1703L_Teardown) for providing the tools to "bypass" the imposed restrictions.
 
-**2.** **ONLY AFTER you successfully** apply the [Jalecom's Hack](https://github.com/Jalecom/AJ_HC1703L_Teardown), you can come back here again and try with using the [ICAI](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365.) app**!!!**
+**2.** **ONLY AFTER you successfully apply the [Jalecom's Hack](https://github.com/Jalecom/AJ_HC1703L_Teardown), you can come back here again and try with using the [ICAI](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365.) app!!!**
 
-**3.** If you have made changes to the file: [debug_cmd.sh](https://github.com/Jalecom/AJ_HC1703L_Teardown/blob/main/sdcard/debug_cmd.sh) and you have removed the account and password with the lines:
+**3.** You must to change the specified directory in the file: [IP_Camera.desktop](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365./blob/main/IP_Camera.desktop) to make the icon visible and replace the information inside.
 
-`
-...#
-mount --bind /mnt/hack/group /etc/group
-mount --bind /mnt/hack/passwd /etc/passwd
-mount --bind /mnt/hack/shadow /etc/shadow
-#...
-`
+**4.** Change the 
 
-than, you also need to change the information in: `FTP_USER=` and `FTP_PASSWORD=` under the `class RecordingsBrowser(tk.Toplevel):` of the file: [recordings_browser.py](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365./blob/main/recordings_browser.py) with yours credential! Also you must to change the specified directory in the file: [IP_Camera.desktop](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365./blob/main/IP_Camera.desktop) to make the icon visible and replace the information inside [camera_config.json](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365./blob/main/camera_config.json) with your IP addresses!!!!
+```json
 
-**4.** To use the file manager with the button: **"VIEW RECORDS"**, you need to edit the line in the file [config.txt](https://github.com/Jalecom/AJ_HC1703L_Teardown/blob/main/SDCARD_v0.4/config.txt) where the type of [hack](https://github.com/Jalecom/AJ_HC1703L_Teardown/tree/main/SDCARD_v0.4) is set. It should look like this: `HACKTYPE=T`. The file [config.txt](https://github.com/Jalecom/AJ_HC1703L_Teardown/blob/main/SDCARD_v0.4/config.txt), which you downloaded from the [Jalecom's](https://github.com/Jalecom/AJ_HC1703L_Teardown) repo along with the other files and folders, is located on your "SD card" and by default looks like this: `HACKTYPE=SD`. This is the only way to unlock the ability to record video on your camera's memory card! If you leave the `HACKTYPE=SD`, the file browser window will still open, but if there are no folders or files whose names contain the date and time, you will not see anything!
+"ip": "CAMERA_IP",
+"name": "THE_NAME_OF_THE_CAMERAS",
+"rtsp_url": "rtsp://CAMERA_IP:554/0/av0",
+"audio_url": "rtsp://CAMERA_IP:8001/0/audio",
+
+```
+inside [camera_config.json](https://github.com/TwoTeeToRoomTwo/ICAI-IP_Camera_Alternative_Interface_Alternative_to_ICam365_and_YCC365./blob/main/camera_config.json) with your real data!!!!
+
+**4.** To use the file manager with the button: **"VIEW RECORDS"**, you need to edit the line in the file [config.txt](https://github.com/Jalecom/AJ_HC1703L_Teardown/blob/main/SDCARD_v0.4/config.txt) where the type of [hack](https://github.com/Jalecom/AJ_HC1703L_Teardown/tree/main/SDCARD_v0.4) is set. It should look like this: `HACKTYPE=T`. The file [config.txt](https://github.com/Jalecom/AJ_HC1703L_Teardown/blob/main/SDCARD_v0.4/config.txt), which you downloaded from the [Jalecom's](https://github.com/Jalecom/AJ_HC1703L_Teardown) repo along with the other files and folders, is located on your "SD card" and by default looks like this: `HACKTYPE=SD`. This is the only way to unlock the ability to record video on your camera's memory card, through the option that you must have already enabled from your factory application **ICam365/Ycc365**! If you leave the `HACKTYPE=SD`, the file browser window will still open, and you will be able to play, delete or copy the files, but if there are no folders or files whose names contain the date and time (as default), you will not see anything!
 
 **5.** IM TOO LAZY, TO TRANSLATE, ALL OF THE TEXT, OF THE EXPLANATIONS. SO GOOD LUCK WITH THAT TASK 
 
