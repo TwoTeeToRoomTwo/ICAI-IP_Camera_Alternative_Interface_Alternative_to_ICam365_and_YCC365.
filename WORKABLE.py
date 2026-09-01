@@ -22,9 +22,6 @@ import gc
 import traceback
 import socket
 
-# Заглушаваме OpenCV логовете
-os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
-
 try:
     import sounddevice as sd
     from scipy.io.wavfile import write as wav_write
@@ -65,7 +62,7 @@ class CameraController:
             print("Warning: mixer init failed:", e)
 
         # Начални размери
-        self.screen_width = 1200
+        self.screen_width = 1024
         self.screen_height = 800
 
         self.screen = pygame.display.set_mode(
@@ -1518,30 +1515,30 @@ class CameraController:
     def render_ui(self):
         try:
             self.screen.fill(self.colors["background"])
-            panel_width = 250
+            panel_width = 200
 
-            video_width = self.screen_width - 2 * panel_width - 40
-            video_height = self.screen_height - 50
+            video_width = self.screen_width - 2 * panel_width - 30
+            video_height = self.screen_height - 30
 
             left_panel = self.draw_control_panel(
-                self.screen, 10, 50, panel_width, video_height, "Control"
+                self.screen, 10, 40, panel_width, video_height, "Контрол"
             )
             right_panel = self.draw_control_panel(
                 self.screen,
                 self.screen_width - panel_width - 10,
-                50,
+                30,
                 panel_width,
                 video_height,
                 ".",
             )
 
             self.video_rect = pygame.Rect(
-                panel_width + 20, 50, video_width, video_height
+                panel_width + 30, 50, video_width, video_height
             )
-            pygame.draw.rect(self.screen, (0, 0, 0), self.video_rect)
+            # pygame.draw.rect(self.screen, (0, 0, 0), self.video_rect)
             pygame.draw.rect(self.screen, self.colors["border"], self.video_rect, 2)
             title_surface = self.font_medium.render(
-                "Video Stream", True, self.colors["text"]
+                "Видео Стрийм", True, self.colors["text"]
             )
             self.screen.blit(
                 title_surface, (self.video_rect.x + 10, self.video_rect.y - 25)
@@ -2223,42 +2220,75 @@ class CameraController:
 
     def draw_mini_cameras(self, video_x, video_y, video_width, video_height):
         try:
-            mini_camera_height = 200
-            mini_camera_width = 360
-            mini_camera_spacing = 10
-            mini_cameras_area_y = video_y + video_height - mini_camera_height - 20
+            # Определяме максимален брой мини камери, които могат да се поберат
+            max_mini_cameras = 5
+            available_width = video_width - 20  # 10px отстъп от всяка страна
+            min_camera_width = 100  # Минимална ширина за да се вижда нещо
+            min_camera_height = 60  # Минимална височина
 
-            # Винаги извеждаме всички камери освен текущата, в фиксиран ред
+            # Изчисляваме колко камери могат да се поберат в наличното пространство
+            estimated_width = available_width // max_mini_cameras
+            actual_camera_width = max(min_camera_width, min(estimated_width, 360))
+
+            # Пропорционално изчисляваме височината (запазвайки аспект-рацио)
+            aspect_ratio = (
+                16 / 9
+            )  # 9:16 аспект-рацио (или използвай 16/9 ако искаш хоризонтално)
+            actual_camera_height = int(actual_camera_width * aspect_ratio)
+            actual_camera_height = max(
+                min_camera_height, min(actual_camera_height, 200)
+            )
+
+            # Пространството, което мини камерите ще заемат
+            mini_cameras_area_y = video_y + video_height - actual_camera_height - 20
+
+            # Винаги извеждаме всички камери освен текущата
             other_cameras = []
             for i, cam in enumerate(self.cameras):
                 if i != self.current_camera_index:
                     other_cameras.append((i, cam))
 
-            # Сортираме по индекс за консистентност
             other_cameras.sort(key=lambda x: x[0])
 
-            max_mini_cameras = min(len(other_cameras), 5)
-            if max_mini_cameras == 0:
+            # Изчисляваме колко мини камери можем реално да покажем
+            possible_cameras = min(len(other_cameras), max_mini_cameras)
+
+            # Проверяваме дали всички ще се поберат хоризонтално
+            total_needed_width = (
+                possible_cameras * actual_camera_width + (possible_cameras - 1) * 5
+            )  # 5px между камерите
+
+            if total_needed_width > available_width:
+                # Ако не се побират, намаляваме броя
+                while possible_cameras > 0:
+                    total_needed_width = (
+                        possible_cameras * actual_camera_width
+                        + (possible_cameras - 1) * 5
+                    )
+                    if total_needed_width <= available_width:
+                        break
+                    possible_cameras -= 1
+
+            if possible_cameras == 0:
                 return
 
+            # Изчисляваме стартова позиция, за да бъдат центрирани
             total_width = (
-                max_mini_cameras * mini_camera_width
-                + (max_mini_cameras - 1) * mini_camera_spacing
+                possible_cameras * actual_camera_width + (possible_cameras - 1) * 5
             )
+            start_x = video_x + (available_width - total_width) // 2 + 10
 
-            start_x = video_x + (video_width - total_width) // 2
-
-            for i in range(max_mini_cameras):
+            for i in range(possible_cameras):
                 if i >= len(other_cameras):
                     break
 
                 camera_index, camera = other_cameras[i]
 
-                mini_x = start_x + i * (mini_camera_width + mini_camera_spacing)
+                mini_x = start_x + i * (actual_camera_width + 5)
                 mini_y = mini_cameras_area_y
 
                 mini_rect = pygame.Rect(
-                    mini_x, mini_y, mini_camera_width, mini_camera_height
+                    mini_x, mini_y, actual_camera_width, actual_camera_height
                 )
                 self.mini_camera_rects[camera_index] = mini_rect
 
@@ -2272,6 +2302,8 @@ class CameraController:
                     if camera_index == self.current_camera_index
                     else self.colors["border"]
                 )
+
+                # Рисуваме рамка
                 pygame.draw.rect(
                     self.screen, border_color, mini_rect, 2, border_radius=5
                 )
@@ -2281,7 +2313,7 @@ class CameraController:
                     try:
                         scaled_surface = pygame.transform.scale(
                             camera["mini_video_surface"],
-                            (mini_camera_width - 4, mini_camera_height - 4),
+                            (actual_camera_width - 4, actual_camera_height - 4),
                         )
                         self.screen.blit(scaled_surface, (mini_x + 2, mini_y + 2))
                     except Exception as e:
@@ -2294,20 +2326,31 @@ class CameraController:
                         if is_connected
                         else self.colors["danger"]
                     )
-                    status_surface = self.font_small.render(
-                        status_text, True, status_color
-                    )
+
+                    # Изберете подходящ размер за текста в зависимост от размера на мини камерата
+                    font_to_use = self.font_small
+                    if actual_camera_width < 120:
+                        # Ако камерата е много малка, използвай по-малък шрифт
+                        # (ще трябва да създадеш такъв шрифт ако не съществува)
+                        pass
+
+                    status_surface = font_to_use.render(status_text, True, status_color)
                     status_x = (
-                        mini_x + (mini_camera_width - status_surface.get_width()) // 2
+                        mini_x + (actual_camera_width - status_surface.get_width()) // 2
                     )
                     status_y = (
-                        mini_y + (mini_camera_height - status_surface.get_height()) // 2
+                        mini_y
+                        + (actual_camera_height - status_surface.get_height()) // 2
                     )
                     self.screen.blit(status_surface, (status_x, status_y))
 
-                    # Draw spinning circle animation if attempting connection
+                    # Анимация за връзка (ако е нужна при по-малки размери)
                     conn_state = self.camera_connectivity_states.get(camera_index)
-                    if conn_state and conn_state.get("attempting", False):
+                    if (
+                        conn_state
+                        and conn_state.get("attempting", False)
+                        and actual_camera_width > 80
+                    ):
                         # Calculate rotation angle based on time since attempt started
                         elapsed = time.time() - conn_state.get(
                             "start_time", time.time()
@@ -2315,9 +2358,11 @@ class CameraController:
                         angle = (elapsed * 5) % 360  # Rotate 5 degrees per second
 
                         # Draw spinning circle
-                        center_x = mini_x + mini_camera_width // 2
-                        center_y = mini_y + mini_camera_height // 2
-                        radius = 15
+                        center_x = mini_x + actual_camera_width // 2
+                        center_y = mini_y + actual_camera_height // 2
+                        radius = min(
+                            15, actual_camera_width // 4
+                        )  # Пропорционален радиус
                         end_x = center_x + radius * np.cos(np.radians(angle))
                         end_y = center_y + radius * np.sin(np.radians(angle))
 
@@ -2328,29 +2373,6 @@ class CameraController:
                             (end_x, end_y),
                             3,
                         )
-
-                # Draw camera name with red color and bold font on black background
-                name_surface = self.font_bold.render(
-                    camera["name"][:15],
-                    True,
-                    (255, 0, 0),  # Red color
-                )
-                name_bg = pygame.Surface(
-                    (name_surface.get_width() + 4, name_surface.get_height() + 2)
-                )
-                name_bg.fill((0, 0, 0))  # Black background
-                name_x = mini_x + (mini_camera_width - name_surface.get_width()) // 2
-                name_y = mini_y + mini_camera_height - name_surface.get_height() - 2
-                self.screen.blit(name_bg, (name_x - 2, name_y - 1))
-                self.screen.blit(name_surface, (name_x, name_y))
-
-                if camera_index == self.current_camera_index:
-                    pygame.draw.rect(
-                        self.screen,
-                        self.colors["success"],
-                        (mini_x, mini_y, 10, 10),
-                        border_radius=5,
-                    )
 
         except Exception as e:
             print(f"Error drawing mini cameras: {e}")
@@ -3607,7 +3629,7 @@ class CameraController:
                     self.status_message = "Готов за работа"
                     self.status_timer = time.time()
 
-                clock.tick(12)
+                clock.tick(30)
 
             except Exception as e:
                 traceback.print_exc()
@@ -3623,4 +3645,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Фатална грешка: {e}")
         traceback.print_exc()
-
