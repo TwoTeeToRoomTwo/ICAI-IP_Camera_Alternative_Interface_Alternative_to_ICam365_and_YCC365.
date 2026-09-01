@@ -1,6 +1,8 @@
 ![alt text](https://raw.githubusercontent.com/TwoTeeToRoomTwo/-ICAI---IP-Camera-Alternative-Interface.-Alternative-to-ICam365-YCC365/refs/heads/main/ICAI3.png)
 
-NB!!! 1. Before using that app "ICAI, let's thank to Jalecom for providing the tools to "bypass" the imposed restrictions. Go to this link: https://github.com/Jalecom/AJ_HC1703L_Teardown and follow the instructions!!!
+NB!!! 
+
+1. Before using that app "ICAI, let's thank to Jalecom for providing the tools to "bypass" the imposed restrictions. Go to this link: https://github.com/Jalecom/AJ_HC1703L_Teardown and follow the instructions!!!
 
 2. ONLY AFTER you successfully apply the Jalecom's "Hack", you can come back here again and try with using the "ICAI" app. Don't forget to change the information, inside the "IP_Camera.desktop" also inside "camera_config.json" with your data!!!
 
@@ -8,7 +10,9 @@ NB!!! 1. Before using that app "ICAI, let's thank to Jalecom for providing the t
 
 4. The app is far from complete! You are welcome to use your brain and help with it!
 
-5. "recording_module.py" and "tracking_module.py" are not usable for now!
+5. "tracking_module.py" is not usable for now!
+
+6. Change the "FTP_USER" and "FTP_PASSWORD" in "class" of the "recordings_browser.py" with yours credential!
 
 I hope, the app, will be useful to someone. I'm not a programmer, I relied on the help of my local AI ​​model, and therefore gross errors are possible, so I apologize in advance!
 NJOY!!!
