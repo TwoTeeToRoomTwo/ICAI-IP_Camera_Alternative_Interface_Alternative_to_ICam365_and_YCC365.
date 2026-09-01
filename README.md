@@ -10,7 +10,7 @@ NB!!!
 
 4. The app is far from complete! You are welcome to use your brain and help with it!
 
-5. "tracking_module.py" is not usable for now!
+5. "tracking_module.py" is not usable for now, but it is made to use the "YOLO" model, located in the "YOLOv12" folder. At a later stage, I will fix its work!
 
 6. Change the "FTP_USER" and "FTP_PASSWORD" in "class" of the "recordings_browser.py" with yours credential!
 
